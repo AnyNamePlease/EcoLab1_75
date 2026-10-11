@@ -51,3 +51,23 @@
 ## 5. Заключение
 
 Проект **EcoLab** успешно прошел все запланированные испытания. Архитектура приложения показала высокую отказоустойчивость и соответствие заявленным экологическим стандартам мониторинга.
+
+## Компилирование
+# Через CMake
+```bash
+
+# 1. Сконфигурировать проект с помощью CMake
+cmake .
+
+# 2. Запустить процесс компиляции
+make
+```
+# Через gcc
+```bash
+gcc -std=c99 -Wall -Wextra -pedantic -fno-builtin -IInc \
+    Test/test_main.c \
+    Src/CEcoActivationFunctions.c \
+    Src/CEcoNeuralLayer.c \
+    EcoMathMathUtils.c \
+    -o test_suite
+```
