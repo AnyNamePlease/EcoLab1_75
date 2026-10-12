@@ -62,3 +62,24 @@
 ## 5. Заключение
 
 Проект **EcoLab** успешно завершен. Реализованные компоненты функций активации и нейронного слоя демонстрируют высокую надежность, точность и готовность к интеграции в более крупные комплексы глубокого обучения.
+
+
+## Компилирование
+# Через CMake
+```bash
+
+# 1. Сконфигурировать проект с помощью CMake
+cmake .
+
+# 2. Запустить процесс компиляции
+make
+```
+# Через gcc
+```bash
+gcc -std=c99 -Wall -Wextra -pedantic -fno-builtin -IInc \
+    Test/test_main.c \
+    Src/CEcoActivationFunctions.c \
+    Src/CEcoNeuralLayer.c \
+    EcoMathMathUtils.c \
+    -o test_suite
+```
