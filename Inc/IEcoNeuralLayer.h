@@ -1,7 +1,7 @@
 #ifndef __I_ECO_NEURAL_LAYER_H__
 #define __I_ECO_NEURAL_LAYER_H__
 
-#include "IEcoUnknown.h"
+#include "IEcoBase1.h"
 #include "IEcoVector.h"
 
 typedef enum {
@@ -11,21 +11,26 @@ typedef enum {
     ACTIVATION_SOFTMAX
 } ActivationType;
 
-typedef struct IEcoNeuralLayer {
-    /* IEcoUnknown */
-    ACOM_RESULT (*QueryInterface)(struct IEcoNeuralLayer* me, const UGUID* riid, void** ppv);
-    uint32_t (*AddRef)(struct IEcoNeuralLayer* me);
-    uint32_t (*Release)(struct IEcoNeuralLayer* me);
+// [ИЗМЕНЕНО]: Добавлен IID для нейронного слоя
+#ifndef IID_IEcoNeuralLayer_DEFINED
+#define IID_IEcoNeuralLayer_DEFINED
+static const UGUID IID_IEcoNeuralLayer = { 0x02, 0x10, {0x93, 0x22, 0x22, 0x48, 0x47, 0x42, 0xAE, 0x06, 0x82, 0x81, 0x94, 0x47, 0x84, 0x3D} };
+#endif
 
-    /* Метод инициализации слоя */
-    ACOM_RESULT (*Init)(struct IEcoNeuralLayer* me, ActivationType type, double alpha, size_t size);
+typedef struct IEcoNeuralLayer* IEcoNeuralLayerPtr_t;
 
-    /* Прямой проход: сохраняет вход/выход во внутреннем состоянии */
-    ACOM_RESULT (*Forward)(struct IEcoNeuralLayer* me, const EcoVector* input, EcoVector* output);
+// [ИЗМЕНЕНО]: Виртуальная таблица методов нейронного слоя с поддержкой ECOCALLMETHOD
+typedef struct IEcoNeuralLayerVTbl {
+    int16_t (ECOCALLMETHOD *QueryInterface)(/* in */ IEcoNeuralLayerPtr_t me, /* in */ const UGUID* riid, /* out */ voidptr_t* ppv);
+    uint32_t (ECOCALLMETHOD *AddRef)(/* in */ IEcoNeuralLayerPtr_t me);
+    uint32_t (ECOCALLMETHOD *Release)(/* in */ IEcoNeuralLayerPtr_t me);
+    int16_t (ECOCALLMETHOD *Init)(/* in */ IEcoNeuralLayerPtr_t me, /* in */ ActivationType type, /* in */ double alpha, /* in */ size_t size);
+    int16_t (ECOCALLMETHOD *Forward)(/* in */ IEcoNeuralLayerPtr_t me, /* in */ const EcoVector* input, /* out */ EcoVector* output);
+    int16_t (ECOCALLMETHOD *Backward)(/* in */ IEcoNeuralLayerPtr_t me, /* in */ const EcoVector* grad_output, /* out */ EcoVector* grad_input);
+} IEcoNeuralLayerVTbl, *IEcoNeuralLayerVTblPtr;
 
-    /* Обратный проход: использует сохранённое состояние для расчёта градиентов */
-    ACOM_RESULT (*Backward)(struct IEcoNeuralLayer* me, const EcoVector* grad_output, EcoVector* grad_input);
-
-} IEcoNeuralLayer, *IEcoNeuralLayerPtr;
+interface IEcoNeuralLayer {
+    struct IEcoNeuralLayerVTbl *pVTbl;
+} IEcoNeuralLayer;
 
 #endif /* __I_ECO_NEURAL_LAYER_H__ */
