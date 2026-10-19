@@ -1,55 +1,43 @@
 #include "IEcoNeuralLayer.h"
 #include "IEcoActivationFunctions.h"
-#include <stdlib.h> // Для динамического выделения памяти
+#include <stdlib.h>
 
 extern IEcoActivationFunctions* GetActivationFunctionsComponent(void);
 
-/* Внутренняя структура компонента, наследующая интерфейс IEcoNeuralLayer */
+// [ИЗМЕНЕНО]: Полная структура компонента нейронного слоя со скрытыми данными и указателем на VTbl
 typedef struct CEcoNeuralLayer {
-    /* Таблица функций (в данном интерфейсе они объявлены прямо в структуре) */
-    ACOM_RESULT (*QueryInterface)(struct IEcoNeuralLayer* me, const UGUID* riid, void** ppv);
-    uint32_t (*AddRef)(struct IEcoNeuralLayer* me);
-    uint32_t (*Release)(struct IEcoNeuralLayer* me);
-    ACOM_RESULT (*Init)(struct IEcoNeuralLayer* me, ActivationType type, double alpha, size_t size);
-    ACOM_RESULT (*Forward)(struct IEcoNeuralLayer* me, const EcoVector* input, EcoVector* output);
-    ACOM_RESULT (*Backward)(struct IEcoNeuralLayer* me, const EcoVector* grad_output, EcoVector* grad_input);
-
-    /* Скрытые данные экземпляра (состояние слоя) */
+    struct IEcoNeuralLayerVTbl* pVTbl;
     uint32_t ref_count;
     ActivationType type;
     double alpha;
     size_t size;
-
     EcoVector cached_input;
     EcoVector cached_output;
     int is_forward_done;
 } CEcoNeuralLayer;
 
-static ACOM_RESULT CEcoNeuralLayer_QueryInterface(struct IEcoNeuralLayer* me, const UGUID* riid, void** ppv) {
-    (void)riid; /* Place the suppression statement inside the function body */
-
+static int16_t ECOCALLMETHOD CEcoNeuralLayer_QueryInterface(IEcoNeuralLayerPtr_t me, const UGUID* riid, voidptr_t* ppv) {
+    (void)riid;
     if (me == NULL || ppv == NULL) {
-        return ACOM_E_POINTER;
+        return -2; /* ACOM_E_POINTER */
     }
-
     *ppv = me;
-    me->AddRef(me);
-    return ACOM_OK;
+    me->pVTbl->AddRef(me);
+    return 0; /* ACOM_OK */
 }
 
-static uint32_t CEcoNeuralLayer_AddRef(struct IEcoNeuralLayer* me) {
+static uint32_t ECOCALLMETHOD CEcoNeuralLayer_AddRef(IEcoNeuralLayerPtr_t me) {
     CEcoNeuralLayer* this_ptr = (CEcoNeuralLayer*)me;
     if (me == NULL) return (uint32_t)-1;
     return ++this_ptr->ref_count;
 }
 
-static uint32_t CEcoNeuralLayer_Release(struct IEcoNeuralLayer* me) {
+static uint32_t ECOCALLMETHOD CEcoNeuralLayer_Release(IEcoNeuralLayerPtr_t me) {
     CEcoNeuralLayer* this_ptr = (CEcoNeuralLayer*)me;
     if (me == NULL) return (uint32_t)-1;
 
     --this_ptr->ref_count;
     if (this_ptr->ref_count == 0) {
-        /* Освобождение динамической памяти при уничтожении компонента */
         if (this_ptr->cached_input.data) free(this_ptr->cached_input.data);
         if (this_ptr->cached_output.data) free(this_ptr->cached_output.data);
         free(this_ptr);
@@ -58,15 +46,14 @@ static uint32_t CEcoNeuralLayer_Release(struct IEcoNeuralLayer* me) {
     return this_ptr->ref_count;
 }
 
-static ACOM_RESULT CEcoNeuralLayer_Init(struct IEcoNeuralLayer* me, ActivationType type, double alpha, size_t size) {
-    if (me == NULL) return ACOM_E_POINTER;
+static int16_t ECOCALLMETHOD CEcoNeuralLayer_Init(IEcoNeuralLayerPtr_t me, ActivationType type, double alpha, size_t size) {
+    if (me == NULL) return -2;
     CEcoNeuralLayer* this_ptr = (CEcoNeuralLayer*)me;
 
     this_ptr->type = type;
     this_ptr->alpha = alpha;
     this_ptr->size = size;
 
-    /* Динамическое выделение памяти для кэша без ограничения в 128 элементов */
     if (this_ptr->cached_input.data) free(this_ptr->cached_input.data);
     if (this_ptr->cached_output.data) free(this_ptr->cached_output.data);
 
@@ -74,7 +61,7 @@ static ACOM_RESULT CEcoNeuralLayer_Init(struct IEcoNeuralLayer* me, ActivationTy
     this_ptr->cached_output.data = (double*)malloc(size * sizeof(double));
 
     if (!this_ptr->cached_input.data || !this_ptr->cached_output.data) {
-        return ACOM_E_FAIL; /* Ошибка выделения памяти */
+        return -1;
     }
 
     this_ptr->cached_input.capacity = size;
@@ -83,13 +70,13 @@ static ACOM_RESULT CEcoNeuralLayer_Init(struct IEcoNeuralLayer* me, ActivationTy
     this_ptr->cached_output.size = 0;
     this_ptr->is_forward_done = 0;
 
-    return ACOM_OK;
+    return 0;
 }
 
-static ACOM_RESULT CEcoNeuralLayer_Forward(struct IEcoNeuralLayer* me, const EcoVector* input, EcoVector* output) {
-    if (me == NULL || input == NULL || output == NULL) return ACOM_E_POINTER;
+static int16_t ECOCALLMETHOD CEcoNeuralLayer_Forward(IEcoNeuralLayerPtr_t me, const EcoVector* input, EcoVector* output) {
+    if (me == NULL || input == NULL || output == NULL) return -2;
     CEcoNeuralLayer* this_ptr = (CEcoNeuralLayer*)me;
-    if (input->size != this_ptr->size) return ACOM_E_INVALIDARG;
+    if (input->size != this_ptr->size) return -3;
 
     IEcoActivationFunctions* act = GetActivationFunctionsComponent();
 
@@ -99,16 +86,16 @@ static ACOM_RESULT CEcoNeuralLayer_Forward(struct IEcoNeuralLayer* me, const Eco
     this_ptr->cached_input.size = input->size;
 
     if (this_ptr->type == ACTIVATION_SOFTMAX) {
-        act->Softmax(act, input, output);
+        act->pVTbl->Softmax(act, input, output);
     } else {
         for (size_t i = 0; i < input->size; ++i) {
             double x = input->data[i];
             if (this_ptr->type == ACTIVATION_SIGMOID) {
-                output->data[i] = act->Sigmoid(act, x);
+                output->data[i] = act->pVTbl->Sigmoid(act, x);
             } else if (this_ptr->type == ACTIVATION_RELU) {
-                output->data[i] = act->ReLU(act, x);
+                output->data[i] = act->pVTbl->ReLU(act, x);
             } else if (this_ptr->type == ACTIVATION_LEAKY_RELU) {
-                output->data[i] = act->LeakyReLU(act, x, this_ptr->alpha);
+                output->data[i] = act->pVTbl->LeakyReLU(act, x, this_ptr->alpha);
             }
         }
         output->size = input->size;
@@ -120,49 +107,51 @@ static ACOM_RESULT CEcoNeuralLayer_Forward(struct IEcoNeuralLayer* me, const Eco
     this_ptr->cached_output.size = output->size;
     this_ptr->is_forward_done = 1;
 
-    return ACOM_OK;
+    return 0;
 }
 
-static ACOM_RESULT CEcoNeuralLayer_Backward(struct IEcoNeuralLayer* me, const EcoVector* grad_output, EcoVector* grad_input) {
-    if (me == NULL || grad_output == NULL || grad_input == NULL) return ACOM_E_POINTER;
+static int16_t ECOCALLMETHOD CEcoNeuralLayer_Backward(IEcoNeuralLayerPtr_t me, const EcoVector* grad_output, EcoVector* grad_input) {
+    if (me == NULL || grad_output == NULL || grad_input == NULL) return -2;
     CEcoNeuralLayer* this_ptr = (CEcoNeuralLayer*)me;
-    if (!this_ptr->is_forward_done) return ACOM_E_FAIL;
+    if (!this_ptr->is_forward_done) return -1;
 
     IEcoActivationFunctions* act = GetActivationFunctionsComponent();
 
     if (this_ptr->type == ACTIVATION_SOFTMAX) {
-        return act->SoftmaxVectorGrad(act, &this_ptr->cached_input, grad_output, grad_input);
+        return act->pVTbl->SoftmaxVectorGrad(act, &this_ptr->cached_input, grad_output, grad_input);
     } else {
         for (size_t i = 0; i < this_ptr->size; ++i) {
             double x = this_ptr->cached_input.data[i];
             double d = 0.0;
             if (this_ptr->type == ACTIVATION_SIGMOID) {
-                d = act->SigmoidDerivative(act, x);
+                d = act->pVTbl->SigmoidDerivative(act, x);
             } else if (this_ptr->type == ACTIVATION_RELU) {
-                d = act->ReLUDerivative(act, x);
+                d = act->pVTbl->ReLUDerivative(act, x);
             } else if (this_ptr->type == ACTIVATION_LEAKY_RELU) {
-                d = act->LeakyReLUDerivative(act, x, this_ptr->alpha);
+                d = act->pVTbl->LeakyReLUDerivative(act, x, this_ptr->alpha);
             }
             grad_input->data[i] = grad_output->data[i] * d;
         }
         grad_input->size = this_ptr->size;
     }
-    return ACOM_OK;
+    return 0;
 }
 
-/* Фабричный метод (заглушка) для создания экземпляра слоя.
-   В полноценной ОС на базе АОМК создание происходит через QueryComponent и Class Factory. */
+// [ИЗМЕНЕНО]: VTbl для нейронного слоя
+static IEcoNeuralLayerVTbl g_x42209322VTbl = {
+    CEcoNeuralLayer_QueryInterface,
+    CEcoNeuralLayer_AddRef,
+    CEcoNeuralLayer_Release,
+    CEcoNeuralLayer_Init,
+    CEcoNeuralLayer_Forward,
+    CEcoNeuralLayer_Backward
+};
+
 IEcoNeuralLayer* GetNeuralLayerComponent(void) {
     CEcoNeuralLayer* layer = (CEcoNeuralLayer*)malloc(sizeof(CEcoNeuralLayer));
     if (!layer) return NULL;
 
-    layer->QueryInterface = CEcoNeuralLayer_QueryInterface;
-    layer->AddRef = CEcoNeuralLayer_AddRef;
-    layer->Release = CEcoNeuralLayer_Release;
-    layer->Init = CEcoNeuralLayer_Init;
-    layer->Forward = CEcoNeuralLayer_Forward;
-    layer->Backward = CEcoNeuralLayer_Backward;
-
+    layer->pVTbl = &g_x42209322VTbl;
     layer->ref_count = 1;
     layer->cached_input.data = NULL;
     layer->cached_output.data = NULL;
