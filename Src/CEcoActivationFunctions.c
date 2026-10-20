@@ -2,45 +2,41 @@
 #include "EcoMathMathUtils.h"
 #include <stdlib.h>
 
-// [ИЗМЕНЕНО]: Полная структура компонента с поддержкой VTbl и счетчика ссылок по стандарту Eco
+// [ИЗМЕНЕНО]: Структура компонента содержит указатель на VTbl и счетчик ссылок
 typedef struct CEcoActivationFunctions {
     struct IEcoActivationFunctionsVTbl* pVTbl;
     uint32_t m_cRef;
 } CEcoActivationFunctions;
 
-// [ИЗМЕНЕНО]: Реализация QueryInterface через ECOCALLMETHOD
 static int16_t ECOCALLMETHOD CEcoActivationFunctions_QueryInterface(IEcoActivationFunctionsPtr_t me, const UGUID* riid, voidptr_t* ppv) {
     CEcoActivationFunctions* pCMe = (CEcoActivationFunctions*)me;
 
     if (me == NULL || ppv == NULL) {
-        return -1;
+        return -2; // ACOM_E_POINTER
     }
 
     if (IsEqualUGUID(riid, &IID_IEcoActivationFunctions) || IsEqualUGUID(riid, &IID_IEcoUnknown)) {
         *ppv = pCMe;
         pCMe->pVTbl->AddRef(me);
-        return 0;
+        return 0; // ACOM_OK
     }
 
     *ppv = NULL;
-    return -1;
+    return -1; // ACOM_E_FAIL
 }
 
-// [ИЗМЕНЕНО]: Реализация AddRef через ECOCALLMETHOD
 static uint32_t ECOCALLMETHOD CEcoActivationFunctions_AddRef(IEcoActivationFunctionsPtr_t me) {
     CEcoActivationFunctions* pCMe = (CEcoActivationFunctions*)me;
     if (me == NULL) return (uint32_t)-1;
     return ++pCMe->m_cRef;
 }
 
-// [ИЗМЕНЕНО]: Реализация Release через ECOCALLMETHOD
 static uint32_t ECOCALLMETHOD CEcoActivationFunctions_Release(IEcoActivationFunctionsPtr_t me) {
     CEcoActivationFunctions* pCMe = (CEcoActivationFunctions*)me;
     if (me == NULL) return (uint32_t)-1;
 
     --pCMe->m_cRef;
     if (pCMe->m_cRef == 0) {
-        // Для статического или управляемого экземпляра освобождение памяти
         return 0;
     }
     return pCMe->m_cRef;
@@ -58,7 +54,7 @@ static double ECOCALLMETHOD CEcoActivationFunctions_Sigmoid(IEcoActivationFuncti
 }
 
 static double ECOCALLMETHOD CEcoActivationFunctions_SigmoidDerivative(IEcoActivationFunctionsPtr_t me, double x) {
-    // [ИЗМЕНЕНО]: Вызов метода через pVTbl->Sigmoid согласно стандартам Eco
+    // [ИЗМЕНЕНО]: Вызов метода через pVTbl
     double s = me->pVTbl->Sigmoid(me, x);
     return s * (1.0 - s);
 }
@@ -161,7 +157,7 @@ static int16_t ECOCALLMETHOD CEcoActivationFunctions_SoftmaxVectorGrad(IEcoActiv
     return 0;
 }
 
-// [ИЗМЕНЕНО]: Таблица виртуальных функций компонента функций активации
+// [ИЗМЕНЕНО]: Инициализация таблицы виртуальных функций
 static IEcoActivationFunctionsVTbl g_x3209322VTbl = {
     CEcoActivationFunctions_QueryInterface,
     CEcoActivationFunctions_AddRef,
@@ -182,10 +178,9 @@ static CEcoActivationFunctions g_ActivationFunctionsInstance = {
     1
 };
 
-// [ИЗМЕНЕНО]: Функция инициализации компонента (точка входа для фабрики)
-int16_t initCEcoActivationFunctions(IEcoUnknown* pIUnkOuter, const UGUID* riid, voidptr_t* ppv) {
+int16_t ECOCALLMETHOD initCEcoActivationFunctions(IEcoUnknown* pIUnkOuter, const UGUID* riid, voidptr_t* ppv) {
     (void)pIUnkOuter;
-    if (ppv == NULL) return -1;
+    if (ppv == NULL) return -2;
     return g_ActivationFunctionsInstance.pVTbl->QueryInterface((IEcoActivationFunctionsPtr_t)&g_ActivationFunctionsInstance, riid, ppv);
 }
 
