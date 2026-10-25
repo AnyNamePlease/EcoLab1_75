@@ -1,0 +1,5 @@
+/Users/konstantinobojmov/VsCode/EcoLab1_75-main/build/CMakeFiles/EcoComponents.dir
+/Users/konstantinobojmov/VsCode/EcoLab1_75-main/build/CMakeFiles/EcoLab1Test.dir
+/Users/konstantinobojmov/VsCode/EcoLab1_75-main/build/CMakeFiles/EcoLab2Test.dir
+/Users/konstantinobojmov/VsCode/EcoLab1_75-main/build/CMakeFiles/edit_cache.dir
+/Users/konstantinobojmov/VsCode/EcoLab1_75-main/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libEcoComponents.a CMakeFiles/EcoComponents.dir/Src/CEcoNeuralLayer.c.o CMakeFiles/EcoComponents.dir/Src/CEcoActivationFunctions.c.o CMakeFiles/EcoComponents.dir/Src/EcoMathMathUtils.c.o CMakeFiles/EcoComponents.dir/Src_2/CEcoLab2.c.o
+/usr/bin/ranlib libEcoComponents.a

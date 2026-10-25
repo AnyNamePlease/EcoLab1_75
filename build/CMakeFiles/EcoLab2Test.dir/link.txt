@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/EcoLab2Test.dir/Test/test_lab2.c.o -o EcoLab2Test  libEcoComponents.a
